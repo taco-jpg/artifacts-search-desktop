@@ -1,6 +1,6 @@
 {
   "name": "artifacts-search-desktop",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "private": true,
   "description": "Interactive HTML/JavaScript artifacts and DuckDuckGo search for DeepSeek Harness Desktop",

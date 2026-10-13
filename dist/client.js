@@ -41,6 +41,7 @@ var import_react = __toESM(require("react"), 1);
 var namespace = "artifacts-search-desktop";
 var dictionaries = {
   en: {
+    presented: "Presented {title} below this reply",
     generating: "Generating interactive artifact\u2026",
     unavailable: "Artifact unavailable",
     artifact: "Interactive artifact {title}",
@@ -55,6 +56,7 @@ var dictionaries = {
     truncated: " \xB7 Results truncated"
   },
   zh: {
+    presented: "\u5DF2\u5728\u56DE\u590D\u4E0B\u65B9\u663E\u793A {title}",
     generating: "\u6B63\u5728\u751F\u6210\u4EA4\u4E92\u4F5C\u54C1\u2026",
     unavailable: "\u4F5C\u54C1\u4E0D\u53EF\u7528",
     artifact: "\u4EA4\u4E92\u4F5C\u54C1 {title}",
@@ -107,6 +109,11 @@ function Artifact({ phase, block, t }) {
   }
   return /* @__PURE__ */ import_react.default.createElement("section", { "aria-label": t("artifact", { title: artifact.title }), style: { border: "1px solid #d8deea", borderRadius: 14, overflow: "hidden", margin: "12px 0", width: "100%" } }, /* @__PURE__ */ import_react.default.createElement("header", { style: { display: "flex", gap: 8, alignItems: "center", padding: 12, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("strong", { style: { flex: 1 } }, artifact.title), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setSource(!source) }, t(source ? "preview" : "source")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setRevision(revision + 1) }, t("reset")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: download }, t("download"))), source && /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap", padding: 16, maxHeight: 560, overflow: "auto" } }, artifact.html), /* @__PURE__ */ import_react.default.createElement("iframe", { key: revision, title: artifact.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: previewDocument(artifact.html), style: { width: "100%", height: 480, border: 0, background: "#fff", display: source ? "none" : "block" } }), /* @__PURE__ */ import_react.default.createElement("footer", { style: { fontSize: 11, padding: "7px 12px", opacity: 0.65 } }, t("isolation"), " \xB7 ", artifact.id));
 }
+function ArtifactReceipt({ phase, block, t }) {
+  if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("generating"));
+  const artifact = artifactFromBlock(block);
+  return /* @__PURE__ */ import_react.default.createElement("p", null, artifact ? t("presented", { title: artifact.title }) : block.content?.map((c) => c.text ?? "").join("\n") || t("unavailable"));
+}
 function Search({ phase, block, t }) {
   if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("searching"));
   const value = block.meta?.search;
@@ -115,21 +122,24 @@ function Search({ phase, block, t }) {
 }
 function CompletedArtifacts({ turn, useChat, t }) {
   const snapshot = useChat((value) => value);
-  const artifacts = [];
+  const artifacts = /* @__PURE__ */ new Map();
   function visit(block) {
-    if (block.kind === "tool-result" && block.call?.name === "present_artifact" && artifactFromBlock(block)) artifacts.push(block);
+    if (block.kind === "tool-result" && block.call?.name === "present_artifact") {
+      const artifact = artifactFromBlock(block);
+      if (artifact) artifacts.set(artifact.id, block);
+    }
     for (const child of block.subCalls ?? []) visit(child);
   }
   for (const node of snapshot.nodes.values()) {
     if (node.kind === "tool-call" && node.location?.turn?.turn === turn.turn) visit(node.data.root);
   }
-  return artifacts.length ? /* @__PURE__ */ import_react.default.createElement("div", { "aria-label": t("completed") }, artifacts.map((block) => /* @__PURE__ */ import_react.default.createElement(Artifact, { key: block.callId, phase: "result", block, t }))) : null;
+  return artifacts.size ? /* @__PURE__ */ import_react.default.createElement("div", { "aria-label": t("completed") }, [...artifacts.values()].map((block) => /* @__PURE__ */ import_react.default.createElement(Artifact, { key: block.callId, phase: "result", block, t }))) : null;
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(namespace, dictionaries));
   ctx.slots.inject("conversation.chat.turnTail", () => ctx.slots.register({ name: "conversation.chat.turnTail", id: "interactive-artifacts", order: 0, locale: namespace }, CompletedArtifacts));
   ctx.slots.inject("tool.call.toolview", function* () {
-    yield ctx.slots.register({ name: "tool.call.toolview", key: "present_artifact", locale: namespace }, Artifact);
+    yield ctx.slots.register({ name: "tool.call.toolview", key: "present_artifact", locale: namespace }, ArtifactReceipt);
     yield ctx.slots.register({ name: "tool.call.toolview", key: "duckduckgo_search", locale: namespace }, Search);
   });
 }

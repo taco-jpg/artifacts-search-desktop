@@ -23,3 +23,9 @@ Uses DSH’s native locale dictionaries and slot locale subscription (English an
 Installed 0.1.4 on macOS Desktop 0.2.0-rc.2; switched the actual General → Language preference English → 中文 → English. Existing artifact controls updated immediately (Source/Reset/Download HTML ↔ 源码/重置/下载 HTML). Restored the user’s English preference after checking.
 
 The existing generated half-angle tutorial reports “Invalid or unexpected token” on page reload; the page-wide desktop smoke detects that separate HTML error. Locale switching passed in the real app, and the shipped-client regression fixture passed all controls and state-preservation checks. This locale hotfix does not rewrite existing generated HTML.
+
+## 0.1.5 duplicate preview fix
+
+The tool-history slot now renders a localized receipt instead of another iframe. The turn footer retains only the latest successful revision per artifact ID. Browser regression mounts both slots, repeated IDs, a failed revision and another turn; it verifies exactly one iframe with the latest successful HTML, and repeats interaction/state/download/locale checks.
+
+Installed 0.1.5 in the real Desktop chat “Interactive Skill Trig Identity”. Two successful calls used the same pythagorean-identity ID (the model revised an angle arc); the footer now shows one card. Expanding both tool groups still leaves exactly one iframe, and reload keeps one iframe. Slider → 360°, source round trip and reset → 37° passed.

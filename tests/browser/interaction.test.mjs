@@ -20,11 +20,25 @@ window.__ModuleLoader__ = { load({factory}) {
     register(spec, component) { const Localized=props=>{const {active}=useSyncExternalStore(subscribe,getSnapshot);const dictionaries=dicts.get(spec.locale);const t=(key,params)=>{let text=(dictionaries?.[active]??dictionaries?.en)?.[key]??key;return text.replace(/\\{(\\w+)\\}/g,(match,name)=>params?.[name]??match);};return React.createElement(component,{...props,t});};slots.set(spec.key ?? spec.id, Localized); return () => slots.delete(spec.key ?? spec.id); }
   }});
 }};
-window.mountArtifact = artifact => {
+const renderer = createRoot(document.getElementById('root'));
+window.mountArtifact = (artifact, includeDistinct=false) => {
   // Real ToolResultNode has no turn property; ownership lives on its Chat node location.
   const root={kind:'tool-result',callId:'test-chart',call:{name:'present_artifact',argsRaw:JSON.stringify(artifact)},meta:{artifact},content:[],subCalls:[]};
-  const snapshot={nodes:new Map([['test',{kind:'tool-call',location:{turn:{turn:1}},data:{root}}]])};
-  createRoot(document.getElementById('root')).render(React.createElement(slots.get('interactive-artifacts'),{turn:{turn:1},useChat:selector=>selector(snapshot)}));
+  const previous={...root,callId:'previous',meta:{artifact:{...artifact,html:'<p>Old revision</p>'}}};
+  const failed={...root,callId:'failed',isError:true};
+  const otherTurn={...root,callId:'other-turn',meta:{artifact:{...artifact,id:'other-turn'}}};
+  const snapshot={nodes:new Map([
+    ['previous',{kind:'tool-call',location:{turn:{turn:1}},data:{root:previous}}],
+    ['test',{kind:'tool-call',location:{turn:{turn:1}},data:{root}}],
+    ['failed',{kind:'tool-call',location:{turn:{turn:1}},data:{root:failed}}],
+    ['other',{kind:'tool-call',location:{turn:{turn:0}},data:{root:otherTurn}}],
+  ])};
+  if(includeDistinct) snapshot.nodes.set('distinct',{kind:'tool-call',location:{turn:{turn:1}},data:{root:{...root,callId:'distinct',meta:{artifact:{...artifact,id:'distinct',title:'Second artifact'}}}}});
+  renderer.render(React.createElement(React.Fragment,null,
+    React.createElement(slots.get('present_artifact'),{phase:'start',block:{}}),
+    ...[previous,root,failed].map(block=>React.createElement(slots.get('present_artifact'),{key:block.callId,phase:'result',block})),
+    React.createElement(slots.get('interactive-artifacts'),{turn:{turn:1},useChat:selector=>selector(snapshot)})
+  ));
 };`, resolveDir: process.cwd(), loader: 'js' }, bundle: true, platform: 'browser', format: 'iife', write: false });
 const client = await readFile('dist/client.js', 'utf8');
 const html = await readFile('tests/fixtures/interaction-chart.html','utf8');
@@ -97,6 +111,7 @@ if (!process.env.DSH_DESKTOP_SMOKE_IMPORT) {
       await page.addScriptTag({content:client});
       await page.evaluate(a=>window.mountArtifact(a),artifact);
       await exerciseChart(page);
+      assert.equal(await page.locator('iframe').count(),1,'Tool history and repeated revisions must not create duplicate previews');
       const card=page.getByLabel('本轮交互作品').getByLabel('交互作品 插件交互验证',{exact:true});
       const frame=await (await card.locator('iframe').elementHandle()).contentFrame();
       await frame.getByRole('button',{name:'所有数值翻倍',exact:true}).click();
@@ -112,6 +127,9 @@ if (!process.env.DSH_DESKTOP_SMOKE_IMPORT) {
         assert.equal(await frame.locator('#multiplierText').innerText(),'×2','Language changes preserve chart state');
       }
 
+      await page.evaluate(a=>window.mountArtifact(a,true),artifact);
+      await page.getByLabel('交互作品 Second artifact',{exact:true}).waitFor();
+      assert.equal(await page.locator('iframe').count(),2,'Different artifact IDs must remain separate');
       assert.deepEqual(errors,[]); assert.deepEqual(externalRequests,[],'CSP must stop fetch before it reaches the network');
     } finally {await browser.close();}
   });

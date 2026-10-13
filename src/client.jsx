@@ -26,6 +26,12 @@ function Artifact({ phase, block, t }) {
     <footer style={{fontSize:11,padding:'7px 12px',opacity:.65}}>{t('isolation')} · {artifact.id}</footer>
   </section>;
 }
+// Tool history keeps a receipt; the turn footer owns the single interactive preview.
+function ArtifactReceipt({ phase, block, t }) {
+  if (phase !== 'result') return <p>{t('generating')}</p>;
+  const artifact = artifactFromBlock(block);
+  return <p>{artifact ? t('presented', {title:artifact.title}) : block.content?.map(c=>c.text??'').join('\n') || t('unavailable')}</p>;
+}
 function Search({ phase, block, t }) {
   if (phase !== 'result') return <p>{t('searching')}</p>;
   const value = block.meta?.search;
@@ -36,21 +42,24 @@ function Search({ phase, block, t }) {
 }
 function CompletedArtifacts({ turn, useChat, t }) {
   const snapshot = useChat(value => value);
-  const artifacts = [];
+  const artifacts = new Map();
   function visit(block) {
-    if (block.kind === 'tool-result' && block.call?.name === 'present_artifact' && artifactFromBlock(block)) artifacts.push(block);
+    if (block.kind === 'tool-result' && block.call?.name === 'present_artifact') {
+      const artifact = artifactFromBlock(block);
+      if (artifact) artifacts.set(artifact.id, block);
+    }
     for (const child of block.subCalls ?? []) visit(child);
   }
   for (const node of snapshot.nodes.values()) {
     if (node.kind === 'tool-call' && node.location?.turn?.turn === turn.turn) visit(node.data.root);
   }
-  return artifacts.length ? <div aria-label={t('completed')}>{artifacts.map(block => <Artifact key={block.callId} phase="result" block={block} t={t}/>)}</div> : null;
+  return artifacts.size ? <div aria-label={t('completed')}>{[...artifacts.values()].map(block => <Artifact key={block.callId} phase="result" block={block} t={t}/>)}</div> : null;
 }
 export function apply(ctx) {
   ctx.effect(() => ctx.locale.register(namespace, dictionaries));
   ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({ name:'conversation.chat.turnTail', id:'interactive-artifacts', order:0, locale:namespace }, CompletedArtifacts));
   ctx.slots.inject('tool.call.toolview', function* () {
-    yield ctx.slots.register({name:'tool.call.toolview',key:'present_artifact',locale:namespace},Artifact);
+    yield ctx.slots.register({name:'tool.call.toolview',key:'present_artifact',locale:namespace},ArtifactReceipt);
     yield ctx.slots.register({name:'tool.call.toolview',key:'duckduckgo_search',locale:namespace},Search);
   });
 }
