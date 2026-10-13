@@ -72,11 +72,32 @@ export async function exerciseChart(page, outputDirectory) {
   assert.ok(second.heights.every(h=>Number.isFinite(h)&&h>0));
   assert.notDeepEqual(second.heights,before.heights);
   if (outputDirectory) await card.screenshot({path:outputDirectory+'/chart-after-clicks.png',animations:'disabled'});
+  const inlineDimensions = await card.locator('iframe').boundingBox();
+  const fullscreenToggle = card.getByRole('button',{name:english?'View fullscreen':'全屏查看',exact:true});
+  await fullscreenToggle.click();
+  await page.waitForFunction(()=>document.querySelector('dialog:modal')!==null);
+  const dimensions = await card.locator('iframe').boundingBox();
+  assert.ok(dimensions.height > inlineDimensions.height,'Fullscreen preview must expand beyond the inline height');
+  assert.deepEqual(await state(),second,'Entering fullscreen must preserve chart state');
+  await (await button()).click();
+  const fullscreenState = await state();
+  assert.equal(fullscreenState.multiplier,'×8','Chart buttons must work in fullscreen');
+  await card.getByRole('button',{name:english?'Exit fullscreen':'退出全屏',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('dialog:modal')===null);
+  assert.deepEqual(await state(),fullscreenState,'Leaving fullscreen must preserve chart state');
+  await fullscreenToggle.click();
+  await page.waitForFunction(()=>document.querySelector('dialog:modal')!==null);
+  await page.evaluate(()=>window.dispatchEvent(new MessageEvent('message',{source:window,data:{type:'dsh-artifact-escape'}})));
+  assert.equal(await card.evaluate(node=>node.matches(':modal')),true,'Only this artifact iframe can request Escape exit');
+  await (await button()).focus();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>document.querySelector('dialog:modal')===null);
+  assert.equal(await fullscreenToggle.getAttribute('aria-pressed'),'false');
   await card.getByRole('button',{name:english?'Source':'源码',exact:true}).click();
   assert.match(await card.locator('pre').innerText(),/doubleBtn/);
   assert.equal(await card.locator('iframe').isVisible(),false);
   await card.getByRole('button',{name:english?'Preview':'预览',exact:true}).click();
-  assert.deepEqual(await state(),second,'Source toggle must retain the live iframe and chart state');
+  assert.deepEqual(await state(),fullscreenState,'Source toggle must retain the live iframe and chart state');
   await card.getByRole('button',{name:english?'Reset':'重置',exact:true}).click();
   assert.deepEqual(await state(),before,'Reset must recreate initial chart state');
   const [download] = await Promise.all([
@@ -94,7 +115,7 @@ export async function exerciseChart(page, outputDirectory) {
     return {hostBlocked,networkBlocked};
   });
   assert.deepEqual(isolation,{hostBlocked:true,networkBlocked:true});
-  return {before,first,second,sourcePreserved:true,resetRestored:true,downloadBytes:Buffer.byteLength(downloaded),isolation};
+  return {before,first,second,fullscreenState,fullscreenPreserved:true,sourcePreserved:true,resetRestored:true,downloadBytes:Buffer.byteLength(downloaded),isolation};
 }
 
 // Imported by the desktop smoke script without launching a separate test browser.
@@ -121,6 +142,7 @@ if (!process.env.DSH_DESKTOP_SMOKE_IMPORT) {
         const localized=page.getByLabel(english?'Artifacts in this reply':'本轮交互作品');
         await localized.getByRole('button',{name:english?'Source':'源码',exact:true}).click();
         await localized.getByRole('button',{name:english?'Preview':'预览',exact:true}).click();
+        assert.ok(await localized.getByRole('button',{name:english?'View fullscreen':'全屏查看',exact:true}).isVisible());
         assert.ok(await localized.getByRole('button',{name:english?'Reset':'重置',exact:true}).isVisible());
         assert.ok(await localized.getByRole('button',{name:english?'Download HTML':'下载 HTML',exact:true}).isVisible());
         assert.match(await localized.innerText(),english?/Sandboxed · Network disabled/:/隔离运行 · 网络已禁用/);

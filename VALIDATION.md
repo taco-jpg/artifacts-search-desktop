@@ -29,3 +29,11 @@ The existing generated half-angle tutorial reports “Invalid or unexpected toke
 The tool-history slot now renders a localized receipt instead of another iframe. The turn footer retains only the latest successful revision per artifact ID. Browser regression mounts both slots, repeated IDs, a failed revision and another turn; it verifies exactly one iframe with the latest successful HTML, and repeats interaction/state/download/locale checks.
 
 Installed 0.1.5 in the real Desktop chat “Interactive Skill Trig Identity”. Two successful calls used the same pythagorean-identity ID (the model revised an angle arc); the footer now shows one card. Expanding both tool groups still leaves exactly one iframe, and reload keeps one iframe. Slider → 360°, source round trip and reset → 37° passed.
+
+## 0.1.6 fullscreen viewer
+
+Added localized View fullscreen / Exit fullscreen controls. A native HTML modal dialog fills the app viewport, keeping the same iframe mounted. The header and exit control remain visible; long artifact content scrolls within the expanded preview. Escape works with focus inside the sandboxed iframe through a source-checked, close-only message. Returning inline restores focus and preserves interaction state.
+
+Installed and tested the final bundle in macOS Desktop 0.2.0-rc.2 with the existing unit-circle artifact: inline preview 640 × 480 → expanded preview 1280 × 741 in the current window. Slider interaction, fullscreen source/preview toggle, exit button, Escape from the focused iframe, reset and single-instance rendering all passed. Browser regression covers the same flows and rejects Escape messages from other sources.
+
+[Fullscreen Desktop screenshot](docs/verification/fullscreen-desktop.png) · [Measured results](docs/verification/fullscreen-result.json).

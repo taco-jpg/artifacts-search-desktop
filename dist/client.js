@@ -46,6 +46,9 @@ var dictionaries = {
     unavailable: "Artifact unavailable",
     artifact: "Interactive artifact {title}",
     completed: "Artifacts in this reply",
+    fullscreen: "View fullscreen",
+    exitFullscreen: "Exit fullscreen",
+    fullscreenError: "Could not open fullscreen. Please try again.",
     source: "Source",
     preview: "Preview",
     reset: "Reset",
@@ -61,6 +64,9 @@ var dictionaries = {
     unavailable: "\u4F5C\u54C1\u4E0D\u53EF\u7528",
     artifact: "\u4EA4\u4E92\u4F5C\u54C1 {title}",
     completed: "\u672C\u8F6E\u4EA4\u4E92\u4F5C\u54C1",
+    fullscreen: "\u5168\u5C4F\u67E5\u770B",
+    exitFullscreen: "\u9000\u51FA\u5168\u5C4F",
+    fullscreenError: "\u65E0\u6CD5\u8FDB\u5165\u5168\u5C4F\uFF0C\u8BF7\u91CD\u8BD5\u3002",
     source: "\u6E90\u7801",
     preview: "\u9884\u89C8",
     reset: "\u91CD\u7F6E",
@@ -75,7 +81,7 @@ var dictionaries = {
 // src/preview.mjs
 var CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
 function previewDocument(html) {
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:20px;font:14px system-ui;color:#18243a;background:#fff}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.addEventListener('keydown',event=>{if(event.key==='Escape')parent.postMessage({type:'dsh-artifact-escape'},'*')},true)<\/script><style>body{margin:0;padding:20px;font:14px system-ui;color:#18243a;background:#fff}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
 }
 function artifactFromBlock(block) {
   if (block?.isError) return null;
@@ -96,6 +102,39 @@ var button = { border: "1px solid #d8deea", borderRadius: 8, background: "transp
 function Artifact({ phase, block, t }) {
   const [source, setSource] = (0, import_react.useState)(false);
   const [revision, setRevision] = (0, import_react.useState)(0);
+  const [fullscreen, setFullscreen] = (0, import_react.useState)(false);
+  const [fullscreenError, setFullscreenError] = (0, import_react.useState)(false);
+  const container = (0, import_react.useRef)(null);
+  const preview = (0, import_react.useRef)(null);
+  const fullscreenButton = (0, import_react.useRef)(null);
+  (0, import_react.useEffect)(() => {
+    const onMessage = (event) => {
+      if (event.source === preview.current?.contentWindow && event.data?.type === "dsh-artifact-escape" && container.current?.matches(":modal")) container.current.close();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  function leaveFullscreen() {
+    if (container.current?.matches(":modal")) return;
+    if (container.current) container.current.open = true;
+    setFullscreen(false);
+    fullscreenButton.current?.focus({ preventScroll: true });
+  }
+  function toggleFullscreen() {
+    setFullscreenError(false);
+    try {
+      const dialog = container.current;
+      if (dialog.matches(":modal")) dialog.close();
+      else {
+        dialog.removeAttribute("open");
+        dialog.showModal();
+        setFullscreen(true);
+      }
+    } catch {
+      if (container.current) container.current.open = true;
+      setFullscreenError(true);
+    }
+  }
   if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("generating"));
   const artifact = artifactFromBlock(block);
   if (!artifact) return /* @__PURE__ */ import_react.default.createElement("pre", null, block.content?.map((c) => c.text ?? "").join("\n") || t("unavailable"));
@@ -107,7 +146,7 @@ function Artifact({ phase, block, t }) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   }
-  return /* @__PURE__ */ import_react.default.createElement("section", { "aria-label": t("artifact", { title: artifact.title }), style: { border: "1px solid #d8deea", borderRadius: 14, overflow: "hidden", margin: "12px 0", width: "100%" } }, /* @__PURE__ */ import_react.default.createElement("header", { style: { display: "flex", gap: 8, alignItems: "center", padding: 12, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("strong", { style: { flex: 1 } }, artifact.title), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setSource(!source) }, t(source ? "preview" : "source")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setRevision(revision + 1) }, t("reset")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: download }, t("download"))), source && /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap", padding: 16, maxHeight: 560, overflow: "auto" } }, artifact.html), /* @__PURE__ */ import_react.default.createElement("iframe", { key: revision, title: artifact.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: previewDocument(artifact.html), style: { width: "100%", height: 480, border: 0, background: "#fff", display: source ? "none" : "block" } }), /* @__PURE__ */ import_react.default.createElement("footer", { style: { fontSize: 11, padding: "7px 12px", opacity: 0.65 } }, t("isolation"), " \xB7 ", artifact.id));
+  return /* @__PURE__ */ import_react.default.createElement("dialog", { open: true, ref: container, onClose: leaveFullscreen, role: fullscreen ? "dialog" : "region", "aria-modal": fullscreen || void 0, "aria-label": t("artifact", { title: artifact.title }), style: { border: "1px solid #d8deea", borderRadius: fullscreen ? 0 : 14, overflow: "hidden", margin: fullscreen ? 0 : "12px 0", width: fullscreen ? "100vw" : "100%", padding: 0, maxWidth: "none", maxHeight: "none", color: "inherit", background: "inherit", ...fullscreen ? { position: "fixed", inset: 0, height: "100dvh", display: "flex", flexDirection: "column", background: "Canvas", color: "CanvasText" } : { position: "static" } } }, /* @__PURE__ */ import_react.default.createElement("header", { style: { display: "flex", gap: 8, alignItems: "center", padding: 12, flexWrap: "wrap", flexShrink: 0 } }, /* @__PURE__ */ import_react.default.createElement("strong", { style: { flex: 1 } }, artifact.title), /* @__PURE__ */ import_react.default.createElement("button", { ref: fullscreenButton, style: button, "aria-pressed": fullscreen, onClick: toggleFullscreen }, t(fullscreen ? "exitFullscreen" : "fullscreen")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setSource(!source) }, t(source ? "preview" : "source")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setRevision(revision + 1) }, t("reset")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: download }, t("download"))), fullscreenError && /* @__PURE__ */ import_react.default.createElement("p", { role: "alert", style: { padding: "0 12px" } }, t("fullscreenError")), source && /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap", padding: 16, maxHeight: fullscreen ? "none" : 560, overflow: "auto", ...fullscreen ? { flex: 1, minHeight: 0, margin: 0 } : {} } }, artifact.html), /* @__PURE__ */ import_react.default.createElement("iframe", { ref: preview, key: revision, title: artifact.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: previewDocument(artifact.html), style: { width: "100%", height: fullscreen ? "100%" : 480, ...fullscreen ? { flex: 1, minHeight: 0 } : {}, border: 0, background: "#fff", display: source ? "none" : "block" } }), /* @__PURE__ */ import_react.default.createElement("footer", { style: { fontSize: 11, padding: "7px 12px", opacity: 0.65, flexShrink: 0 } }, t("isolation"), " \xB7 ", artifact.id));
 }
 function ArtifactReceipt({ phase, block, t }) {
   if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("generating"));

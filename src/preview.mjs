@@ -1,7 +1,7 @@
 export const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
 export function previewDocument(html) {
   // CSP precedes all model HTML. A unique sandbox origin prevents access to host storage/DOM.
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:20px;font:14px system-ui;color:#18243a;background:#fff}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${CSP}"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.addEventListener('keydown',event=>{if(event.key==='Escape')parent.postMessage({type:'dsh-artifact-escape'},'*')},true)</script><style>body{margin:0;padding:20px;font:14px system-ui;color:#18243a;background:#fff}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
 }
 export function artifactFromBlock(block) {
   if (block?.isError) return null;

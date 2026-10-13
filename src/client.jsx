@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { namespace, dictionaries } from './locale.mjs';
 import { previewDocument, artifactFromBlock } from './preview.mjs';
 export const name = 'artifacts-search-desktop';
@@ -7,6 +7,42 @@ const button = { border:'1px solid #d8deea', borderRadius:8, background:'transpa
 function Artifact({ phase, block, t }) {
   const [source, setSource] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState(false);
+  const container = useRef(null);
+  const preview = useRef(null);
+  const fullscreenButton = useRef(null);
+  useEffect(() => {
+    const onMessage = event => {
+      if (event.source === preview.current?.contentWindow && event.data?.type === 'dsh-artifact-escape' && container.current?.matches(':modal')) container.current.close();
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+  function leaveFullscreen() {
+    // Keep the same dialog and iframe mounted in the inline layout.
+    if (container.current?.matches(':modal')) return;
+    if (container.current) container.current.open = true;
+    setFullscreen(false);
+    fullscreenButton.current?.focus({preventScroll:true});
+  }
+  function toggleFullscreen() {
+    setFullscreenError(false);
+    try {
+      const dialog = container.current;
+      if (dialog.matches(':modal')) dialog.close();
+      else {
+        // An open non-modal dialog must be closed before showModal. Removing the
+        // attribute preserves its iframe and avoids an asynchronous close event.
+        dialog.removeAttribute('open');
+        dialog.showModal();
+        setFullscreen(true);
+      }
+    } catch {
+      if (container.current) container.current.open = true;
+      setFullscreenError(true);
+    }
+  }
   if (phase !== 'result') return <p>{t('generating')}</p>;
   const artifact = artifactFromBlock(block);
   if (!artifact) return <pre>{block.content?.map(c => c.text ?? '').join('\n') || t('unavailable')}</pre>;
@@ -15,16 +51,18 @@ function Artifact({ phase, block, t }) {
     const a = document.createElement('a'); a.href=url; a.download=artifact.id.replace(/[^a-zA-Z0-9_-]/g,'_')+'.html'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  return <section aria-label={t('artifact', {title:artifact.title})} style={{border:'1px solid #d8deea',borderRadius:14,overflow:'hidden',margin:'12px 0',width:'100%'}}>
-    <header style={{display:'flex',gap:8,alignItems:'center',padding:12,flexWrap:'wrap'}}><strong style={{flex:1}}>{artifact.title}</strong>
+  return <dialog open ref={container} onClose={leaveFullscreen} role={fullscreen?'dialog':'region'} aria-modal={fullscreen||undefined} aria-label={t('artifact', {title:artifact.title})} style={{border:'1px solid #d8deea',borderRadius:fullscreen?0:14,overflow:'hidden',margin:fullscreen?0:'12px 0',width:fullscreen?'100vw':'100%',padding:0,maxWidth:'none',maxHeight:'none',color:'inherit',background:'inherit',...(fullscreen?{position:'fixed',inset:0,height:'100dvh',display:'flex',flexDirection:'column',background:'Canvas',color:'CanvasText'}:{position:'static'})}}>
+    <header style={{display:'flex',gap:8,alignItems:'center',padding:12,flexWrap:'wrap',flexShrink:0}}><strong style={{flex:1}}>{artifact.title}</strong>
+      <button ref={fullscreenButton} style={button} aria-pressed={fullscreen} onClick={toggleFullscreen}>{t(fullscreen?'exitFullscreen':'fullscreen')}</button>
       <button style={button} onClick={()=>setSource(!source)}>{t(source?'preview':'source')}</button>
       <button style={button} onClick={()=>setRevision(revision+1)}>{t('reset')}</button>
       <button style={button} onClick={download}>{t('download')}</button>
     </header>
-    {source && <pre style={{whiteSpace:'pre-wrap',padding:16,maxHeight:560,overflow:'auto'}}>{artifact.html}</pre>}
-    <iframe key={revision} title={artifact.title} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={previewDocument(artifact.html)} style={{width:'100%',height:480,border:0,background:'#fff',display:source?'none':'block'}}/>
-    <footer style={{fontSize:11,padding:'7px 12px',opacity:.65}}>{t('isolation')} · {artifact.id}</footer>
-  </section>;
+    {fullscreenError && <p role="alert" style={{padding:'0 12px'}}>{t('fullscreenError')}</p>}
+    {source && <pre style={{whiteSpace:'pre-wrap',padding:16,maxHeight:fullscreen?'none':560,overflow:'auto',...(fullscreen?{flex:1,minHeight:0,margin:0}:{})}}>{artifact.html}</pre>}
+    <iframe ref={preview} key={revision} title={artifact.title} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={previewDocument(artifact.html)} style={{width:'100%',height:fullscreen?'100%':480,...(fullscreen?{flex:1,minHeight:0}:{}),border:0,background:'#fff',display:source?'none':'block'}}/>
+    <footer style={{fontSize:11,padding:'7px 12px',opacity:.65,flexShrink:0}}>{t('isolation')} · {artifact.id}</footer>
+  </dialog>;
 }
 // Tool history keeps a receipt; the turn footer owns the single interactive preview.
 function ArtifactReceipt({ phase, block, t }) {

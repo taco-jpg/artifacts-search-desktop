@@ -1,0 +1,22 @@
+{
+  "inline": {
+    "x": 457.75,
+    "y": 108,
+    "width": 640,
+    "height": 480
+  },
+  "full": {
+    "x": 1,
+    "y": 53,
+    "width": 1280,
+    "height": 741
+  },
+  "iframeCount": 1,
+  "statePreserved": true,
+  "sliderWorks": true,
+  "sourceWorks": true,
+  "exitButtonWorks": true,
+  "escapeFromIframeWorks": true,
+  "resetRestored": true,
+  "testedAt": "2026-10-13T02:44:31.864Z"
+}
