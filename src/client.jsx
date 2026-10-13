@@ -32,7 +32,18 @@ function Search({ phase, block }) {
     {value.sources.map(s=><p key={s.url}><a href={s.url} target="_blank" rel="noreferrer noopener">{s.title || s.url}</a><br/><small>{s.snippet}</small></p>)}
     {!value.sources.length && <p>未找到结果</p>}<small>{value.retrievedAt}{value.truncated?' · 结果已截取':''}</small></section>;
 }
+function CompletedArtifacts({ turn, useChat }) {
+  const nodes = useChat(snapshot => snapshot.legacy.nodes);
+  const artifacts = [];
+  function visit(block) {
+    if (block.kind === 'tool-result' && block.turn === turn.turn && block.call?.name === 'present_artifact' && artifactFromBlock(block)) artifacts.push(block);
+    for (const child of block.subCalls ?? []) visit(child);
+  }
+  for (const block of nodes) visit(block);
+  return artifacts.length ? <div aria-label="本轮交互作品">{artifacts.map(block => <Artifact key={block.callId} phase="result" block={block}/>)}</div> : null;
+}
 export function apply(ctx) {
+  ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({ name:'conversation.chat.turnTail', id:'interactive-artifacts', order:0 }, CompletedArtifacts));
   ctx.slots.inject('tool.call.toolview', function* () {
     yield ctx.slots.register({name:'tool.call.toolview',key:'present_artifact'},Artifact);
     yield ctx.slots.register({name:'tool.call.toolview',key:'duckduckgo_search'},Search);

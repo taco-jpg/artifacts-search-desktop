@@ -80,7 +80,18 @@ function Search({ phase, block }) {
   if (!value || block.isError) return /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap" } }, block.content?.map((c) => c.text ?? "").join("\n"));
   return /* @__PURE__ */ import_react.default.createElement("section", { style: { borderLeft: "3px solid #7294dc", padding: "8px 16px", margin: "10px 0" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, "DuckDuckGo \xB7 ", value.query), value.sources.map((s) => /* @__PURE__ */ import_react.default.createElement("p", { key: s.url }, /* @__PURE__ */ import_react.default.createElement("a", { href: s.url, target: "_blank", rel: "noreferrer noopener" }, s.title || s.url), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("small", null, s.snippet))), !value.sources.length && /* @__PURE__ */ import_react.default.createElement("p", null, "\u672A\u627E\u5230\u7ED3\u679C"), /* @__PURE__ */ import_react.default.createElement("small", null, value.retrievedAt, value.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u53D6" : ""));
 }
+function CompletedArtifacts({ turn, useChat }) {
+  const nodes = useChat((snapshot) => snapshot.legacy.nodes);
+  const artifacts = [];
+  function visit(block) {
+    if (block.kind === "tool-result" && block.turn === turn.turn && block.call?.name === "present_artifact" && artifactFromBlock(block)) artifacts.push(block);
+    for (const child of block.subCalls ?? []) visit(child);
+  }
+  for (const block of nodes) visit(block);
+  return artifacts.length ? /* @__PURE__ */ import_react.default.createElement("div", { "aria-label": "\u672C\u8F6E\u4EA4\u4E92\u4F5C\u54C1" }, artifacts.map((block) => /* @__PURE__ */ import_react.default.createElement(Artifact, { key: block.callId, phase: "result", block }))) : null;
+}
 function apply(ctx) {
+  ctx.slots.inject("conversation.chat.turnTail", () => ctx.slots.register({ name: "conversation.chat.turnTail", id: "interactive-artifacts", order: 0 }, CompletedArtifacts));
   ctx.slots.inject("tool.call.toolview", function* () {
     yield ctx.slots.register({ name: "tool.call.toolview", key: "present_artifact" }, Artifact);
     yield ctx.slots.register({ name: "tool.call.toolview", key: "duckduckgo_search" }, Search);
