@@ -9,7 +9,7 @@
 ```sh
 ELECTRON_RUN_AS_NODE=1 '/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness' \
   --expose-internals '/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js' \
-  plugin --profile desktop add ~/Downloads/artifacts-search-desktop-0.1.1.tgz
+  plugin --profile desktop add ~/Downloads/artifacts-search-desktop-0.1.2.tgz
 ```
 
 重新打开应用。也可从仓库下载 `scripts/install-macos.sh`，运行 `sh scripts/install-macos.sh /absolute/path/to/package.tgz`。本包内置构建产物，不需要编译。其他系统可在桌面插件管理器支持包安装时选择同一个 tgz；目前真实桌面验证仅覆盖 macOS。
