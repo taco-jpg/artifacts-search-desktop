@@ -20,7 +20,8 @@ function Artifact({ phase, block }) {
       <button style={button} onClick={()=>setRevision(revision+1)}>重置</button>
       <button style={button} onClick={download}>下载 HTML</button>
     </header>
-    {source ? <pre style={{whiteSpace:'pre-wrap',padding:16,maxHeight:560,overflow:'auto'}}>{artifact.html}</pre> : <iframe key={revision} title={artifact.title} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={previewDocument(artifact.html)} style={{width:'100%',height:480,border:0,background:'#fff'}}/>}
+    {source && <pre style={{whiteSpace:'pre-wrap',padding:16,maxHeight:560,overflow:'auto'}}>{artifact.html}</pre>}
+    <iframe key={revision} title={artifact.title} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={previewDocument(artifact.html)} style={{width:'100%',height:480,border:0,background:'#fff',display:source?'none':'block'}}/>
     <footer style={{fontSize:11,padding:'7px 12px',opacity:.65}}>隔离运行 · 网络已禁用 · {artifact.id}</footer>
   </section>;
 }

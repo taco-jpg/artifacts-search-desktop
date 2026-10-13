@@ -1,0 +1,106 @@
+{
+  "app": "DeepSeek Harness Desktop",
+  "url": "dsh-app://app/",
+  "testedAt": "2026-10-13T00:55:46.449Z",
+  "before": {
+    "multiplier": "×1",
+    "values": [
+      "10",
+      "20",
+      "30"
+    ],
+    "heights": [
+      83.33333333333333,
+      166.66666666666666,
+      250
+    ],
+    "maxTick": "30"
+  },
+  "first": {
+    "multiplier": "×2",
+    "values": [
+      "20",
+      "40",
+      "60"
+    ],
+    "heights": [
+      83.33333333333333,
+      166.66666666666666,
+      250
+    ],
+    "maxTick": "60"
+  },
+  "second": {
+    "multiplier": "×4",
+    "values": [
+      "40",
+      "80",
+      "120"
+    ],
+    "heights": [
+      66.66666666666667,
+      133.33333333333334,
+      200
+    ],
+    "maxTick": "150"
+  },
+  "sourcePreserved": true,
+  "resetRestored": true,
+  "downloadBytes": 6318,
+  "isolation": {
+    "hostBlocked": true,
+    "networkBlocked": true
+  },
+  "afterReload": {
+    "before": {
+      "multiplier": "×1",
+      "values": [
+        "10",
+        "20",
+        "30"
+      ],
+      "heights": [
+        83.33333333333333,
+        166.66666666666666,
+        250
+      ],
+      "maxTick": "30"
+    },
+    "first": {
+      "multiplier": "×2",
+      "values": [
+        "20",
+        "40",
+        "60"
+      ],
+      "heights": [
+        83.33333333333333,
+        166.66666666666666,
+        250
+      ],
+      "maxTick": "60"
+    },
+    "second": {
+      "multiplier": "×4",
+      "values": [
+        "40",
+        "80",
+        "120"
+      ],
+      "heights": [
+        66.66666666666667,
+        133.33333333333334,
+        200
+      ],
+      "maxTick": "150"
+    },
+    "sourcePreserved": true,
+    "resetRestored": true,
+    "downloadBytes": 6318,
+    "isolation": {
+      "hostBlocked": true,
+      "networkBlocked": true
+    }
+  },
+  "scriptErrors": []
+}

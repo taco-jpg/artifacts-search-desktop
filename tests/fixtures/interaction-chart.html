@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>插件交互验证</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2937;
+    --muted: #6b7280;
+    --bar: #4f8ef7;
+    --bar-hover: #2f6fe0;
+    --axis: #9ca3af;
+    --btn-bg: #4f8ef7;
+    --btn-fg: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .subtitle { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  button {
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button:hover { background: var(--bar-hover); }
+  button:active { transform: translateY(1px); }
+  .multiplier {
+    font-size: 14px;
+    font-weight: 600;
+    background: #eef4ff;
+    border: 1px solid #d5e3ff;
+    border-radius: 8px;
+    padding: 7px 12px;
+  }
+  .multiplier span { color: var(--bar-hover); font-variant-numeric: tabular-nums; }
+  .chart-wrap { max-width: 520px; }
+  svg { width: 100%; height: auto; display: block; }
+  .bar {
+    fill: var(--bar);
+    transition: y 0.35s ease, height 0.35s ease;
+  }
+  .bar:hover { fill: var(--bar-hover); }
+  .bar-label { font-size: 13px; fill: var(--fg); font-weight: 600; }
+  .bar-value { font-size: 12px; fill: var(--fg); font-variant-numeric: tabular-nums; transition: opacity 0.2s; }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .grid-line { stroke: #e5e7eb; stroke-width: 1; stroke-dasharray: 3 3; }
+  .tick-label { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .axis-title { font-size: 11px; fill: var(--muted); }
+</style>
+</head>
+<body>
+  <h1>插件交互验证</h1>
+  <p class="subtitle">示例数据（仅用于演示）：A=10、B=20、C=30 · 点击按钮使所有数值翻倍</p>
+
+  <div class="controls">
+    <button id="doubleBtn" type="button">所有数值翻倍</button>
+    <div class="multiplier">当前倍率：<span id="multiplierText">×1</span></div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg id="chart" viewBox="0 0 520 320" role="img" aria-label="柱状图：A、B、C 三个示例数据柱，可翻倍">
+      <g id="grid"></g>
+      <line class="axis-line" x1="60" y1="270" x2="500" y2="270"></line>
+      <line class="axis-line" x1="60" y1="20" x2="60" y2="270"></line>
+      <text class="axis-title" x="280" y="310" text-anchor="middle">类别</text>
+      <text class="axis-title" x="16" y="145" text-anchor="middle" transform="rotate(-90 16 145)">数值</text>
+      <g id="bars"></g>
+    </svg>
+  </div>
+
+<script>
+(function () {
+  var baseData = [
+    { label: 'A', value: 10 },
+    { label: 'B', value: 20 },
+    { label: 'C', value: 30 }
+  ];
+  var multiplier = 1;
+
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var chartTop = 20, chartBottom = 270, chartLeft = 60, chartRight = 500;
+  var plotH = chartBottom - chartTop;
+
+  var barsGroup = document.getElementById('bars');
+  var gridGroup = document.getElementById('grid');
+  var multText = document.getElementById('multiplierText');
+  var btn = document.getElementById('doubleBtn');
+
+  // 创建柱子（一次性创建，之后只更新高度与文本）
+  var bars = baseData.map(function (d, i) {
+    var slotW = (chartRight - chartLeft) / baseData.length;
+    var barW = 64;
+    var x = chartLeft + slotW * i + (slotW - barW) / 2;
+
+    var rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('class', 'bar');
+    rect.setAttribute('x', x);
+    rect.setAttribute('width', barW);
+    rect.setAttribute('rx', 4);
+
+    var valueText = document.createElementNS(svgNS, 'text');
+    valueText.setAttribute('class', 'bar-value');
+    valueText.setAttribute('x', x + barW / 2);
+    valueText.setAttribute('text-anchor', 'middle');
+
+    var labelText = document.createElementNS(svgNS, 'text');
+    labelText.setAttribute('class', 'bar-label');
+    labelText.setAttribute('x', x + barW / 2);
+    labelText.setAttribute('y', chartBottom + 20);
+    labelText.setAttribute('text-anchor', 'middle');
+    labelText.textContent = d.label;
+
+    barsGroup.appendChild(rect);
+    barsGroup.appendChild(valueText);
+    barsGroup.appendChild(labelText);
+    return { rect: rect, valueText: valueText, base: d.value };
+  });
+
+  function niceMax(v) {
+    // 取整到便于阅读的刻度上限
+    var step = Math.pow(10, Math.floor(Math.log10(v))) / 2;
+    return Math.ceil(v / step) * step;
+  }
+
+  function render() {
+    var maxVal = niceMax(Math.max.apply(null, bars.map(function (b) { return b.base * multiplier; })));
+    var ticks = 5;
+
+    // 网格与刻度
+    while (gridGroup.firstChild) gridGroup.removeChild(gridGroup.firstChild);
+    for (var t = 0; t <= ticks; t++) {
+      var val = maxVal * t / ticks;
+      var y = chartBottom - plotH * (t / ticks);
+      if (t > 0) {
+        var gl = document.createElementNS(svgNS, 'line');
+        gl.setAttribute('class', 'grid-line');
+        gl.setAttribute('x1', chartLeft);
+        gl.setAttribute('x2', chartRight);
+        gl.setAttribute('y1', y);
+        gl.setAttribute('y2', y);
+        gridGroup.appendChild(gl);
+      }
+      var tl = document.createElementNS(svgNS, 'text');
+      tl.setAttribute('class', 'tick-label');
+      tl.setAttribute('x', chartLeft - 6);
+      tl.setAttribute('y', y + 3);
+      tl.setAttribute('text-anchor', 'end');
+      tl.textContent = Math.round(val);
+      gridGroup.appendChild(tl);
+    }
+
+    // 柱子
+    bars.forEach(function (b) {
+      var v = b.base * multiplier;
+      var h = plotH * (v / maxVal);
+      b.rect.setAttribute('y', chartBottom - h);
+      b.rect.setAttribute('height', h);
+      b.valueText.setAttribute('y', chartBottom - h - 6);
+      b.valueText.textContent = v;
+    });
+
+    multText.textContent = '×' + multiplier;
+  }
+
+  btn.addEventListener('click', function () {
+    multiplier *= 2;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
