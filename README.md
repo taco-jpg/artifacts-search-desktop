@@ -9,7 +9,7 @@
 ```sh
 ELECTRON_RUN_AS_NODE=1 '/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness' \
   --expose-internals '/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js' \
-  plugin --profile desktop add ~/Downloads/artifacts-search-desktop-0.1.3.tgz
+  plugin --profile desktop add ~/Downloads/artifacts-search-desktop-0.1.4.tgz
 ```
 
 重新打开应用。也可从仓库下载 `scripts/install-macos.sh`，运行 `sh scripts/install-macos.sh /absolute/path/to/package.tgz`。本包内置构建产物，不需要编译。其他系统可在桌面插件管理器支持包安装时选择同一个 tgz；目前真实桌面验证仅覆盖 macOS。
@@ -21,7 +21,7 @@ ELECTRON_RUN_AS_NODE=1 '/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSe
 - “用 DuckDuckGo 搜索 DeepSeek Harness 官方仓库，给我来源链接。”
 - “搜索相关公开数据，再画交互图；标明来源。”
 
-插件注册 `present_artifact({id,title,html})`、`duckduckgo_search({query})`，以及 `interactive-artifacts` 和 `duckduckgo-search` 两个可自动发现的 skill。图表卡片有预览、源码、重置和 HTML 下载。源码切换保留当前交互状态；“重置”重新初始化作品。完成回复后，作品还会显示在本轮回复底部，不随工具过程自动折叠。重复 id 表示同一作品的后续修订，旧版本留在聊天记录中。
+插件注册 `present_artifact({id,title,html})`、`duckduckgo_search({query})`，以及 `interactive-artifacts` 和 `duckduckgo-search` 两个可自动发现的 skill。图表卡片有预览、源码、重置和 HTML 下载。插件按钮、提示与无障碍标签跟随 DSH 语言设置（中文/English），切换即时生效，不重置作品。已生成作品的正文和标题保持原样。源码切换保留当前交互状态；“重置”重新初始化作品。完成回复后，作品还会显示在本轮回复底部，不随工具过程自动折叠。重复 id 表示同一作品的后续修订，旧版本留在聊天记录中。
 
 ## 预览与搜索边界
 

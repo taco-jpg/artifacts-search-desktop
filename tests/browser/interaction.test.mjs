@@ -6,13 +6,18 @@ import { chromium } from 'playwright-core';
 
 // Mount the shipped client bundle through its actual ModuleLoader and slot contracts.
 const harness = await build({ stdin: { contents: `
-import React from 'react';
+import React, {useSyncExternalStore} from 'react';
 import { createRoot } from 'react-dom/client';
 const slots = new Map();
+let snapshotLocale={active:'zh',revision:0};const listeners=new Set();const dicts=new Map();
+window.setTestLocale=active=>{snapshotLocale={active,revision:snapshotLocale.revision+1};for(const fn of listeners)fn();};
+const locale={register(ns,dict){dicts.set(ns,dict);return()=>dicts.delete(ns);}};
+const subscribe=fn=>{listeners.add(fn);return()=>listeners.delete(fn);};
+const getSnapshot=()=>snapshotLocale;
 window.__ModuleLoader__ = { load({factory}) {
-  factory(name => { if (name === 'react') return React; throw new Error('Unexpected module: '+name); }).apply({slots:{
+  factory(name => { if (name === 'react') return React; throw new Error('Unexpected module: '+name); }).apply({locale,effect:fn=>fn(),slots:{
     inject(name, callback) { const result=callback(); if(result?.next) for(const _ of result) {} },
-    register(spec, component) { slots.set(spec.key ?? spec.id, component); return () => slots.delete(spec.key ?? spec.id); }
+    register(spec, component) { const Localized=props=>{const {active}=useSyncExternalStore(subscribe,getSnapshot);const dictionaries=dicts.get(spec.locale);const t=(key,params)=>{let text=(dictionaries?.[active]??dictionaries?.en)?.[key]??key;return text.replace(/\\{(\\w+)\\}/g,(match,name)=>params?.[name]??match);};return React.createElement(component,{...props,t});};slots.set(spec.key ?? spec.id, Localized); return () => slots.delete(spec.key ?? spec.id); }
   }});
 }};
 window.mountArtifact = artifact => {
@@ -26,7 +31,8 @@ const html = await readFile('tests/fixtures/interaction-chart.html','utf8');
 const artifact = {id:'plugin-interaction-bar-chart',title:'插件交互验证',html};
 
 export async function exerciseChart(page, outputDirectory) {
-  const card = page.getByLabel('本轮交互作品').getByLabel('交互作品 插件交互验证',{exact:true});
+  const english = (await page.locator('html').getAttribute('lang'))?.startsWith('en');
+  const card = page.getByLabel(english?'Artifacts in this reply':'本轮交互作品').getByLabel(english?'Interactive artifact 插件交互验证':'交互作品 插件交互验证',{exact:true});
   const getFrame = async () => (await card.locator('iframe').elementHandle()).contentFrame();
   const state = async () => {
     const frame = await getFrame();
@@ -39,7 +45,7 @@ export async function exerciseChart(page, outputDirectory) {
   }));
   };
   await card.waitFor({state:'visible'});
-  await card.getByRole('button',{name:'重置',exact:true}).click();
+  await card.getByRole('button',{name:english?'Reset':'重置',exact:true}).click();
   const before = await state();
   assert.equal(before.multiplier,'×1'); assert.deepEqual(before.values,['10','20','30']);
   const button = () => getFrame().then(frame=>frame.getByRole('button',{name:'所有数值翻倍',exact:true}));
@@ -52,15 +58,15 @@ export async function exerciseChart(page, outputDirectory) {
   assert.ok(second.heights.every(h=>Number.isFinite(h)&&h>0));
   assert.notDeepEqual(second.heights,before.heights);
   if (outputDirectory) await card.screenshot({path:outputDirectory+'/chart-after-clicks.png',animations:'disabled'});
-  await card.getByRole('button',{name:'源码',exact:true}).click();
+  await card.getByRole('button',{name:english?'Source':'源码',exact:true}).click();
   assert.match(await card.locator('pre').innerText(),/doubleBtn/);
   assert.equal(await card.locator('iframe').isVisible(),false);
-  await card.getByRole('button',{name:'预览',exact:true}).click();
+  await card.getByRole('button',{name:english?'Preview':'预览',exact:true}).click();
   assert.deepEqual(await state(),second,'Source toggle must retain the live iframe and chart state');
-  await card.getByRole('button',{name:'重置',exact:true}).click();
+  await card.getByRole('button',{name:english?'Reset':'重置',exact:true}).click();
   assert.deepEqual(await state(),before,'Reset must recreate initial chart state');
   const [download] = await Promise.all([
-    page.waitForEvent('download'),card.getByRole('button',{name:'下载 HTML',exact:true}).click(),
+    page.waitForEvent('download'),card.getByRole('button',{name:english?'Download HTML':'下载 HTML',exact:true}).click(),
   ]);
   assert.equal(download.suggestedFilename(),'plugin-interaction-bar-chart.html');
   const stream = await download.createReadStream(); const chunks=[];
@@ -91,6 +97,21 @@ if (!process.env.DSH_DESKTOP_SMOKE_IMPORT) {
       await page.addScriptTag({content:client});
       await page.evaluate(a=>window.mountArtifact(a),artifact);
       await exerciseChart(page);
+      const card=page.getByLabel('本轮交互作品').getByLabel('交互作品 插件交互验证',{exact:true});
+      const frame=await (await card.locator('iframe').elementHandle()).contentFrame();
+      await frame.getByRole('button',{name:'所有数值翻倍',exact:true}).click();
+      for(const language of ['en','fr','zh']) {
+        await page.evaluate(language=>window.setTestLocale(language),language);
+        const english=language!=='zh';
+        const localized=page.getByLabel(english?'Artifacts in this reply':'本轮交互作品');
+        await localized.getByRole('button',{name:english?'Source':'源码',exact:true}).click();
+        await localized.getByRole('button',{name:english?'Preview':'预览',exact:true}).click();
+        assert.ok(await localized.getByRole('button',{name:english?'Reset':'重置',exact:true}).isVisible());
+        assert.ok(await localized.getByRole('button',{name:english?'Download HTML':'下载 HTML',exact:true}).isVisible());
+        assert.match(await localized.innerText(),english?/Sandboxed · Network disabled/:/隔离运行 · 网络已禁用/);
+        assert.equal(await frame.locator('#multiplierText').innerText(),'×2','Language changes preserve chart state');
+      }
+
       assert.deepEqual(errors,[]); assert.deepEqual(externalRequests,[],'CSP must stop fetch before it reaches the network');
     } finally {await browser.close();}
   });

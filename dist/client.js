@@ -37,6 +37,39 @@ __export(client_exports, {
 module.exports = __toCommonJS(client_exports);
 var import_react = __toESM(require("react"), 1);
 
+// src/locale.mjs
+var namespace = "artifacts-search-desktop";
+var dictionaries = {
+  en: {
+    generating: "Generating interactive artifact\u2026",
+    unavailable: "Artifact unavailable",
+    artifact: "Interactive artifact {title}",
+    completed: "Artifacts in this reply",
+    source: "Source",
+    preview: "Preview",
+    reset: "Reset",
+    download: "Download HTML",
+    isolation: "Sandboxed \xB7 Network disabled",
+    searching: "Searching DuckDuckGo\u2026",
+    noResults: "No results found",
+    truncated: " \xB7 Results truncated"
+  },
+  zh: {
+    generating: "\u6B63\u5728\u751F\u6210\u4EA4\u4E92\u4F5C\u54C1\u2026",
+    unavailable: "\u4F5C\u54C1\u4E0D\u53EF\u7528",
+    artifact: "\u4EA4\u4E92\u4F5C\u54C1 {title}",
+    completed: "\u672C\u8F6E\u4EA4\u4E92\u4F5C\u54C1",
+    source: "\u6E90\u7801",
+    preview: "\u9884\u89C8",
+    reset: "\u91CD\u7F6E",
+    download: "\u4E0B\u8F7D HTML",
+    isolation: "\u9694\u79BB\u8FD0\u884C \xB7 \u7F51\u7EDC\u5DF2\u7981\u7528",
+    searching: "DuckDuckGo \u641C\u7D22\u4E2D\u2026",
+    noResults: "\u672A\u627E\u5230\u7ED3\u679C",
+    truncated: " \xB7 \u7ED3\u679C\u5DF2\u622A\u53D6"
+  }
+};
+
 // src/preview.mjs
 var CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
 function previewDocument(html) {
@@ -56,14 +89,14 @@ function artifactFromBlock(block) {
 
 // src/client.jsx
 var name = "artifacts-search-desktop";
-var inject = ["slots"];
+var inject = ["slots", "locale"];
 var button = { border: "1px solid #d8deea", borderRadius: 8, background: "transparent", color: "inherit", padding: "5px 10px", cursor: "pointer" };
-function Artifact({ phase, block }) {
+function Artifact({ phase, block, t }) {
   const [source, setSource] = (0, import_react.useState)(false);
   const [revision, setRevision] = (0, import_react.useState)(0);
-  if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, "\u6B63\u5728\u751F\u6210\u4EA4\u4E92\u4F5C\u54C1\u2026");
+  if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("generating"));
   const artifact = artifactFromBlock(block);
-  if (!artifact) return /* @__PURE__ */ import_react.default.createElement("pre", null, block.content?.map((c) => c.text ?? "").join("\n") || "Artifact unavailable");
+  if (!artifact) return /* @__PURE__ */ import_react.default.createElement("pre", null, block.content?.map((c) => c.text ?? "").join("\n") || t("unavailable"));
   function download() {
     const url = URL.createObjectURL(new Blob([artifact.html], { type: "text/html" }));
     const a = document.createElement("a");
@@ -72,15 +105,15 @@ function Artifact({ phase, block }) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   }
-  return /* @__PURE__ */ import_react.default.createElement("section", { "aria-label": "\u4EA4\u4E92\u4F5C\u54C1 " + artifact.title, style: { border: "1px solid #d8deea", borderRadius: 14, overflow: "hidden", margin: "12px 0", width: "100%" } }, /* @__PURE__ */ import_react.default.createElement("header", { style: { display: "flex", gap: 8, alignItems: "center", padding: 12, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("strong", { style: { flex: 1 } }, artifact.title), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setSource(!source) }, source ? "\u9884\u89C8" : "\u6E90\u7801"), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setRevision(revision + 1) }, "\u91CD\u7F6E"), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: download }, "\u4E0B\u8F7D HTML")), source && /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap", padding: 16, maxHeight: 560, overflow: "auto" } }, artifact.html), /* @__PURE__ */ import_react.default.createElement("iframe", { key: revision, title: artifact.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: previewDocument(artifact.html), style: { width: "100%", height: 480, border: 0, background: "#fff", display: source ? "none" : "block" } }), /* @__PURE__ */ import_react.default.createElement("footer", { style: { fontSize: 11, padding: "7px 12px", opacity: 0.65 } }, "\u9694\u79BB\u8FD0\u884C \xB7 \u7F51\u7EDC\u5DF2\u7981\u7528 \xB7 ", artifact.id));
+  return /* @__PURE__ */ import_react.default.createElement("section", { "aria-label": t("artifact", { title: artifact.title }), style: { border: "1px solid #d8deea", borderRadius: 14, overflow: "hidden", margin: "12px 0", width: "100%" } }, /* @__PURE__ */ import_react.default.createElement("header", { style: { display: "flex", gap: 8, alignItems: "center", padding: 12, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("strong", { style: { flex: 1 } }, artifact.title), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setSource(!source) }, t(source ? "preview" : "source")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: () => setRevision(revision + 1) }, t("reset")), /* @__PURE__ */ import_react.default.createElement("button", { style: button, onClick: download }, t("download"))), source && /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap", padding: 16, maxHeight: 560, overflow: "auto" } }, artifact.html), /* @__PURE__ */ import_react.default.createElement("iframe", { key: revision, title: artifact.title, sandbox: "allow-scripts", referrerPolicy: "no-referrer", srcDoc: previewDocument(artifact.html), style: { width: "100%", height: 480, border: 0, background: "#fff", display: source ? "none" : "block" } }), /* @__PURE__ */ import_react.default.createElement("footer", { style: { fontSize: 11, padding: "7px 12px", opacity: 0.65 } }, t("isolation"), " \xB7 ", artifact.id));
 }
-function Search({ phase, block }) {
-  if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, "DuckDuckGo \u641C\u7D22\u4E2D\u2026");
+function Search({ phase, block, t }) {
+  if (phase !== "result") return /* @__PURE__ */ import_react.default.createElement("p", null, t("searching"));
   const value = block.meta?.search;
   if (!value || block.isError) return /* @__PURE__ */ import_react.default.createElement("pre", { style: { whiteSpace: "pre-wrap" } }, block.content?.map((c) => c.text ?? "").join("\n"));
-  return /* @__PURE__ */ import_react.default.createElement("section", { style: { borderLeft: "3px solid #7294dc", padding: "8px 16px", margin: "10px 0" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, "DuckDuckGo \xB7 ", value.query), value.sources.map((s) => /* @__PURE__ */ import_react.default.createElement("p", { key: s.url }, /* @__PURE__ */ import_react.default.createElement("a", { href: s.url, target: "_blank", rel: "noreferrer noopener" }, s.title || s.url), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("small", null, s.snippet))), !value.sources.length && /* @__PURE__ */ import_react.default.createElement("p", null, "\u672A\u627E\u5230\u7ED3\u679C"), /* @__PURE__ */ import_react.default.createElement("small", null, value.retrievedAt, value.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u53D6" : ""));
+  return /* @__PURE__ */ import_react.default.createElement("section", { style: { borderLeft: "3px solid #7294dc", padding: "8px 16px", margin: "10px 0" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, "DuckDuckGo \xB7 ", value.query), value.sources.map((s) => /* @__PURE__ */ import_react.default.createElement("p", { key: s.url }, /* @__PURE__ */ import_react.default.createElement("a", { href: s.url, target: "_blank", rel: "noreferrer noopener" }, s.title || s.url), /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("small", null, s.snippet))), !value.sources.length && /* @__PURE__ */ import_react.default.createElement("p", null, t("noResults")), /* @__PURE__ */ import_react.default.createElement("small", null, value.retrievedAt, value.truncated ? t("truncated") : ""));
 }
-function CompletedArtifacts({ turn, useChat }) {
+function CompletedArtifacts({ turn, useChat, t }) {
   const snapshot = useChat((value) => value);
   const artifacts = [];
   function visit(block) {
@@ -90,13 +123,14 @@ function CompletedArtifacts({ turn, useChat }) {
   for (const node of snapshot.nodes.values()) {
     if (node.kind === "tool-call" && node.location?.turn?.turn === turn.turn) visit(node.data.root);
   }
-  return artifacts.length ? /* @__PURE__ */ import_react.default.createElement("div", { "aria-label": "\u672C\u8F6E\u4EA4\u4E92\u4F5C\u54C1" }, artifacts.map((block) => /* @__PURE__ */ import_react.default.createElement(Artifact, { key: block.callId, phase: "result", block }))) : null;
+  return artifacts.length ? /* @__PURE__ */ import_react.default.createElement("div", { "aria-label": t("completed") }, artifacts.map((block) => /* @__PURE__ */ import_react.default.createElement(Artifact, { key: block.callId, phase: "result", block, t }))) : null;
 }
 function apply(ctx) {
-  ctx.slots.inject("conversation.chat.turnTail", () => ctx.slots.register({ name: "conversation.chat.turnTail", id: "interactive-artifacts", order: 0 }, CompletedArtifacts));
+  ctx.effect(() => ctx.locale.register(namespace, dictionaries));
+  ctx.slots.inject("conversation.chat.turnTail", () => ctx.slots.register({ name: "conversation.chat.turnTail", id: "interactive-artifacts", order: 0, locale: namespace }, CompletedArtifacts));
   ctx.slots.inject("tool.call.toolview", function* () {
-    yield ctx.slots.register({ name: "tool.call.toolview", key: "present_artifact" }, Artifact);
-    yield ctx.slots.register({ name: "tool.call.toolview", key: "duckduckgo_search" }, Search);
+    yield ctx.slots.register({ name: "tool.call.toolview", key: "present_artifact", locale: namespace }, Artifact);
+    yield ctx.slots.register({ name: "tool.call.toolview", key: "duckduckgo_search", locale: namespace }, Search);
   });
 }
 
